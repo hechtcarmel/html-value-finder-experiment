@@ -54,11 +54,13 @@ class AnthropicModel(BaseModel):
                 
                 return ModelResponse(
                     value=value,
-                    currency=currency
+                    currency=currency,
+                    raw_response=content
                 )
             except (json.JSONDecodeError, KeyError, AttributeError) as e:
                 print(f"Error parsing response: {str(e)}")
-                return ModelResponse()
+                raw_response = response.content[0].text if hasattr(response, 'content') and response.content else str(response)
+                return ModelResponse(raw_response=raw_response)
                 
         except Exception as e:
             print(f"Error calling Anthropic API: {str(e)}")

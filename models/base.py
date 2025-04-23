@@ -8,10 +8,12 @@ class ModelResponse:
     def __init__(
         self, 
         value: Optional[float] = None, 
-        currency: Optional[str] = None
+        currency: Optional[str] = None,
+        raw_response: Optional[str] = None
     ):
         self.value = self._validate_value(value)
         self.currency = self._validate_currency(currency)
+        self.raw_response = raw_response
     
     def _validate_value(self, value: Any) -> Optional[float]:
         """Validate that value is a number or None."""
@@ -60,14 +62,16 @@ class ModelResponse:
         """Convert response to JSON string."""
         return json.dumps({
             "value": self.value,
-            "currency": self.currency
+            "currency": self.currency,
+            "raw_response": self.raw_response
         })
     
     def to_dict(self) -> Dict:
         """Convert response to dictionary."""
         return {
             "value": self.value,
-            "currency": self.currency
+            "currency": self.currency,
+            "raw_response": self.raw_response
         }
 
 class BaseModel(ABC):

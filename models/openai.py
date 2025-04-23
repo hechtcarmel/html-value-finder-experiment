@@ -35,8 +35,10 @@ class OpenAIModel(BaseModel):
                 ]
             )
             
+            raw_response = response.choices[0].message.content
+            
             try:
-                output = json.loads(response.choices[0].message.content)
+                output = json.loads(raw_response)
                 
                 # Validate and parse fields
                 value = self._parse_number(output.get("value"))
@@ -44,10 +46,11 @@ class OpenAIModel(BaseModel):
                 
                 return ModelResponse(
                     value=value,
-                    currency=currency
+                    currency=currency,
+                    raw_response=raw_response
                 )
             except (json.JSONDecodeError, KeyError):
-                return ModelResponse()
+                return ModelResponse(raw_response=raw_response)
                 
         except Exception as e:
             print(f"Error calling OpenAI API: {str(e)}")

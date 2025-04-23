@@ -6,7 +6,7 @@ def get_system_prompt() -> str:
     """Generate the system prompt for click value evaluation."""
     
     system_prompt = """Your task is to analyze the HTML context and clicked button text to determine the monetary value of a click (For example - how much money the item costs).
-Focus on finding the price most closely associated with the clicked button.
+Focus on finding the value (price) most closely associated with the clicked button.
 
 OUTPUT: 
 A JSON object with the following structure:
@@ -17,14 +17,15 @@ A JSON object with the following structure:
 
 IMPORTANT RULES:
 
-1. If there are multiple prices on the page, consider the context and structure of the page to determine the price.
-2. Consider the context: if the button is inside a product card, the price in that card is relevant. If it's a checkout button, the total price is relevant.
-3. Only include specific "value" and "currency" if you can determine them to be the price that the clicked button is associated with.
+1. If there are multiple values on the page, consider the context and structure of the page to determine the value.
+2. Consider the context: if the button is inside a product card, the value in that card is relevant. If it's a checkout button, the total value is relevant.
+3. Only include specific "value" and "currency" if you can determine them to be the value that the clicked button is associated with.
 4. If very uncertain about the value or currency, return null for those fields.
 5. Return the numeric value without currency symbols.
 6. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.).
 7. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string.
 8. The "currency" field should be a 3-letter currency code (e.g., "USD") or null.
+9. Be careful not to return "price" instead of "value"
 
 Examples of CORRECT values:
 - value: 149.99 (numeric)
@@ -65,13 +66,16 @@ OUTPUT: {json.dumps(modified_response)}
 def get_user_prompt(html: str, button_text: str) -> str:
     """Generate the user prompt with the current case to analyze."""
     
-    return f"""HTML: {html}
-Button Text: {button_text}
+    return f"""html: {html}
+
+button_text: {button_text}
 
 Respond ONLY with a valid JSON object following the exact format specified in the system prompt.
-Focus on the price closest to the button text element in the HTML structure.
+Focus on the value (price) closest to the button text element in the HTML structure.
 Make sure the "value" field is a numeric value or null, never a boolean or string.
-Make sure the "currency" field is a 3-letter currency code or null."""
+Make sure the "currency" field is a 3-letter currency code or null.
+Make sure the value is a number that must exist in the HTML.
+"""
 
 def get_prompt(html: str, button_text: str) -> str:
     """Legacy function that combines system and user prompts for backward compatibility."""

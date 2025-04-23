@@ -46,12 +46,14 @@ class OllamaModel(BaseModel):
                 
                 return ModelResponse(
                     value=value,
-                    currency=currency
+                    currency=currency,
+                    raw_response=response_content
                 )
             except (json.JSONDecodeError, KeyError) as e:
                 print(f"Error parsing response: {str(e)}")
                 # Fallback if the model doesn't return valid JSON
-                return ModelResponse()
+                raw_response = response.get("message", {}).get("content", "") if isinstance(response, dict) else str(response)
+                return ModelResponse(raw_response=raw_response)
                 
         except Exception as e:
             print(f"Error calling Ollama API: {str(e)}")

@@ -35,7 +35,7 @@ async def process_click(
     button_text: str,
     model_choice: str,
     ultra_compact: bool
-) -> Tuple[Dict[str, Any], str, str]:
+) -> Tuple[Dict[str, Any], str, str, Optional[str]]:
     """Process click data and determine monetary value."""
     
     # Clean HTML to reduce tokens
@@ -53,12 +53,13 @@ async def process_click(
     elif model_choice == "Anthropic" and anthropic_model:
         model = anthropic_model
     else:
-        return {"error": "Selected model is not available. Please check API keys or select Ollama."}, cleaned_html, size_info
+        return {"error": "Selected model is not available. Please check API keys or select Ollama."}, cleaned_html, size_info, None
     
     # Process with the selected model using cleaned HTML
     result = await model.evaluate_click(cleaned_html, button_text)
     
-    return result.to_dict(), cleaned_html, size_info
+    # Return the raw response as well
+    return result.to_dict(), cleaned_html, size_info, result.raw_response
 
 # Set up Gradio interface
 with gr.Blocks(title="Click Value Analyzer") as app:
@@ -103,6 +104,12 @@ with gr.Blocks(title="Click Value Analyzer") as app:
         with gr.Column():
             json_output = gr.JSON(label="Analysis Result")
             
+            raw_response_output = gr.Textbox(
+                label="Raw LLM Response",
+                placeholder="The raw response from the LLM will appear here...",
+                lines=8
+            )
+            
             size_info_output = gr.Textbox(
                 label="HTML Size Reduction",
                 placeholder="Size reduction info will appear here...",
@@ -126,7 +133,7 @@ with gr.Blocks(title="Click Value Analyzer") as app:
     analyze_button.click(
         fn=lambda html, text, model, compact: asyncio.run(process_click(html, text, model, compact)),
         inputs=[html_input, button_text_input, model_choice, ultra_compact_checkbox],
-        outputs=[json_output, processed_html_output, size_info_output]
+        outputs=[json_output, processed_html_output, size_info_output, raw_response_output]
     )
 
 if __name__ == "__main__":
