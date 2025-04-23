@@ -3,7 +3,7 @@ import json
 import re
 from anthropic import AsyncAnthropic
 from .base import BaseModel, ModelResponse
-from prompts.click_value import get_prompt
+from prompts.click_value import get_system_prompt, get_user_prompt
 
 class AnthropicModel(BaseModel):
     """Interface for Anthropic Claude models."""
@@ -22,26 +22,28 @@ class AnthropicModel(BaseModel):
         button_text: str
     ) -> ModelResponse:
         """Determine the monetary value of a click using Anthropic Claude model."""
-        prompt = get_prompt(html, button_text)
+        system_prompt = get_system_prompt()
+        user_prompt = get_user_prompt(html, button_text)
         
         try:
             response = await self.client.messages.create(
                 model=self.model_name,
-                # max_tokens=1000,
                 messages=[
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": user_prompt}
                 ],
-                system="You analyze HTML and button text to determine the monetary value of a click. Always respond with a JSON object containing 'value' and 'currency' fields."
+                system=system_prompt
             )
             
             try:
-                # Extract JSON from the response
+                # Extract content from the response
                 content = response.content[0].text
-                # Find JSON block in the response
+                
+                # Try to find JSON in the response
                 json_match = re.search(r'```json\s*(.*?)\s*```', content, re.DOTALL)
                 if json_match:
                     json_str = json_match.group(1)
                 else:
+                    # If no JSON block found, try to parse the entire content
                     json_str = content
                 
                 output = json.loads(json_str)
@@ -54,7 +56,8 @@ class AnthropicModel(BaseModel):
                     value=value,
                     currency=currency
                 )
-            except (json.JSONDecodeError, KeyError, AttributeError):
+            except (json.JSONDecodeError, KeyError, AttributeError) as e:
+                print(f"Error parsing response: {str(e)}")
                 return ModelResponse()
                 
         except Exception as e:

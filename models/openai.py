@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Any
 import json
 from openai import AsyncOpenAI
 from .base import BaseModel, ModelResponse
-from prompts.click_value import get_prompt
+from prompts.click_value import get_system_prompt, get_user_prompt
 
 class OpenAIModel(BaseModel):
     """Interface for OpenAI models."""
@@ -10,7 +10,7 @@ class OpenAIModel(BaseModel):
     def __init__(
         self, 
         api_key: str,
-        model_name: str = "gpt-4o", 
+        model_name: str = "gpt-4o-mini", 
     ):
         self.model_name = model_name
         # Initialize with higher timeout (10 minutes) to handle large HTML content
@@ -22,15 +22,16 @@ class OpenAIModel(BaseModel):
         button_text: str
     ) -> ModelResponse:
         """Determine the monetary value of a click using OpenAI model."""
-        prompt = get_prompt(html, button_text)
+        system_prompt = get_system_prompt()
+        user_prompt = get_user_prompt(html, button_text)
         
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": "You analyze HTML and button text to determine the monetary value of a click."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ]
             )
             

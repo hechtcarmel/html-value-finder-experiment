@@ -21,7 +21,7 @@ anthropic_model = None
 if os.getenv("OPENAI_API_KEY"):
     openai_model = OpenAIModel(
         api_key=os.getenv("OPENAI_API_KEY"),
-        model_name=os.getenv("OPENAI_MODEL", "gpt-4o")
+        model_name=os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     )
 
 if os.getenv("ANTHROPIC_API_KEY"):
