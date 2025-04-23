@@ -2,10 +2,11 @@ import os
 import gradio as gr
 import asyncio
 from dotenv import load_dotenv
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import json
 
 from models import OllamaModel, OpenAIModel, AnthropicModel, ModelResponse
+from utils.html_parser import clean_html
 
 # Load environment variables
 load_dotenv()
@@ -33,8 +34,15 @@ async def process_click(
     html: str, 
     button_text: str,
     model_choice: str
-) -> Dict[str, Any]:
-    """Process click data and return value assessment."""
+) -> Tuple[Dict[str, Any], str, str]:
+    """Process click data and determine monetary value."""
+    
+    # Clean HTML to reduce tokens
+    cleaned_html, original_size, new_size = clean_html(html, button_text)
+    
+    # Create size reduction message
+    reduction_percent = ((original_size - new_size) / original_size) * 100 if original_size > 0 else 0
+    size_info = f"Original: {original_size:,} chars | Cleaned: {new_size:,} chars | Reduced by: {reduction_percent:.1f}%"
     
     # Select model based on user choice
     if model_choice == "Ollama":
@@ -44,17 +52,17 @@ async def process_click(
     elif model_choice == "Anthropic" and anthropic_model:
         model = anthropic_model
     else:
-        return {"error": "Selected model is not available. Please check API keys or select Ollama."}
+        return {"error": "Selected model is not available. Please check API keys or select Ollama."}, cleaned_html, size_info
     
-    # Process with the selected model
-    result = await model.evaluate_click(html, button_text)
+    # Process with the selected model using cleaned HTML
+    result = await model.evaluate_click(cleaned_html, button_text)
     
-    return result.to_dict()
+    return result.to_dict(), cleaned_html, size_info
 
 # Set up Gradio interface
 with gr.Blocks(title="Click Value Analyzer") as app:
     gr.Markdown("# Click Value Analyzer")
-    gr.Markdown("Analyze if a button click has monetary value and determine the amount.")
+    gr.Markdown("Determine the monetary value of clicked buttons in web pages.")
     
     with gr.Row():
         with gr.Column():
@@ -82,15 +90,35 @@ with gr.Blocks(title="Click Value Analyzer") as app:
                 value=available_models[0]
             )
             
-            analyze_button = gr.Button("Analyze Click")
+            analyze_button = gr.Button("Analyze Click Value")
         
         with gr.Column():
             json_output = gr.JSON(label="Analysis Result")
+            
+            size_info_output = gr.Textbox(
+                label="HTML Size Reduction",
+                placeholder="Size reduction info will appear here...",
+                interactive=False
+            )
+            
+            gr.Markdown("""
+            ### Result Format
+            - **value**: The monetary value (if detected with high confidence) or null
+            - **currency**: The currency code (if detected with high confidence) or null
+            """)
+    
+    with gr.Row():
+        processed_html_output = gr.Textbox(
+            label="Processed HTML",
+            placeholder="The processed HTML will appear here...",
+            lines=10,
+            interactive=False
+        )
     
     analyze_button.click(
         fn=lambda html, text, model: asyncio.run(process_click(html, text, model)),
         inputs=[html_input, button_text_input, model_choice],
-        outputs=json_output
+        outputs=[json_output, processed_html_output, size_info_output]
     )
 
 if __name__ == "__main__":
@@ -103,4 +131,5 @@ if __name__ == "__main__":
         quiet=False,
         show_api=True,
         root_path=None,
+        ssl_verify=True,
     ) 

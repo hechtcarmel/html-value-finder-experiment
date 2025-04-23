@@ -19,7 +19,7 @@ class OllamaModel(BaseModel):
         html: str, 
         button_text: str
     ) -> ModelResponse:
-        """Evaluate click using Ollama model."""
+        """Determine the monetary value of a click using Ollama model."""
         prompt = get_prompt(html, button_text)
         
         try:
@@ -39,36 +39,21 @@ class OllamaModel(BaseModel):
             try:
                 output = json.loads(result["response"])
                 
-                # Validate response format
-                is_value_click = self._parse_boolean(output.get("isValueClick", False))
+                # Validate and parse fields
                 value = self._parse_number(output.get("value"))
                 currency = self._parse_currency(output.get("currency"))
                 
-                # If it's not a value click, ensure value and currency are None
-                if not is_value_click:
-                    value = None
-                    currency = None
-                
                 return ModelResponse(
-                    is_value_click=is_value_click,
                     value=value,
                     currency=currency
                 )
             except (json.JSONDecodeError, KeyError):
                 # Fallback if the model doesn't return valid JSON
-                return ModelResponse(is_value_click=False)
+                return ModelResponse()
                 
         except (httpx.HTTPError, json.JSONDecodeError) as e:
             print(f"Error calling Ollama API: {str(e)}")
-            return ModelResponse(is_value_click=False)
-    
-    def _parse_boolean(self, value: Any) -> bool:
-        """Parse a boolean value, handling various formats."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.lower() == "true"
-        return bool(value)
+            return ModelResponse()
     
     def _parse_number(self, value: Any) -> Optional[float]:
         """Parse a numeric value, handling various formats."""
@@ -102,6 +87,7 @@ class OllamaModel(BaseModel):
                 "pounds": "GBP",
                 "yen": "JPY",
                 "rupees": "INR",
+                "shekels": "ILS",
             }
             
             # Clean the value

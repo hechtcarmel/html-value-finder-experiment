@@ -1,12 +1,13 @@
 from typing import List
 from examples.click_examples import EXAMPLES
+import json
 
 def get_prompt(html: str, button_text: str) -> str:
     """Generate a prompt for click value evaluation with multi-shot examples."""
     
     # Create base prompt
     base_prompt = f"""
-Your task is to analyze the HTML context and clicked button text to determine if a click has monetary value.
+Your task is to analyze the HTML context and clicked button text to determine the monetary value of a click.
 
 INPUT:
 - HTML content surrounding the click
@@ -15,29 +16,27 @@ INPUT:
 OUTPUT: 
 A JSON object with the following structure:
 {{
-  "isValueClick": boolean,   // true if this is a purchase/add to cart/etc. click
-  "value": number | null,    // the NUMERIC monetary value if detected (e.g., 149.99), null if not applicable
-  "currency": string | null  // the currency code (USD, EUR, GBP, etc.) if detected, null if not applicable
+  "value": number | null,        // the NUMERIC monetary value if detected with high confidence (e.g., 149.99), null if uncertain
+  "currency": string | null      // the currency code (USD, EUR, GBP, etc.) if detected with high confidence, null if uncertain
 }}
 
 IMPORTANT RULES:
-1. Only return true for "isValueClick" if you're highly confident this is a purchase-related action
-2. Only include "value" and "currency" if you can determine them with high confidence
-3. If uncertain about the value or currency, return null for those fields
-4. Return the numeric value without currency symbols
-5. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.)
-6. For subscription prices, return the value shown (e.g., $9.99/month should return 9.99)
-7. Search for the button text in the HTML to determine context for evaluation
-8. Look for price information near the button or in relevant containers
-9. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string
-10. The "currency" field should be a 3-letter currency code (e.g., "USD") or null
+1. Only include specific "value" and "currency" if you can determine them with high confidence
+2. If uncertain about the value or currency, return null for those fields
+3. Return the numeric value without currency symbols
+4. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.)
+5. For subscription prices, return the value shown (e.g., $9.99/month should return 9.99)
+6. Search for the button text in the HTML to determine context for evaluation
+7. Look for price information near the button or in relevant containers
+8. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string
+9. The "currency" field should be a 3-letter currency code (e.g., "USD") or null
 
 Examples of CORRECT values:
 - value: 149.99 (numeric)
 - value: 15 (numeric)
-- value: null (when no monetary value is found)
+- value: null (when monetary value can't be determined with confidence)
 - currency: "USD" (3-letter code)
-- currency: null (when no currency is found)
+- currency: null (when currency can't be determined with confidence)
 
 Examples of INCORRECT values:
 - value: true (boolean, not numeric)
@@ -50,15 +49,20 @@ Here are examples of how to analyze different scenarios:
 
     # Add examples
     for i, example in enumerate(EXAMPLES):
+        # Create a simplified response that excludes isValueClick
+        modified_response = {
+            "value": example['response']['value'],
+            "currency": example['response']['currency']
+        }
+        
         base_prompt += f"""
 EXAMPLE {i+1}:
 HTML: {example['html']}
 Button Text: {example['button_text']}
 Analysis: 
-- This {'is' if example['response']['isValueClick'] else 'is not'} a value click
-- {'Value: ' + str(example['response']['value']) if example['response']['value'] is not None else 'No clear value found'}
-- {'Currency: ' + str(example['response']['currency']) if example['response']['currency'] is not None else 'No clear currency found'}
-OUTPUT: {example['response_json']}
+- {'Value: ' + str(example['response']['value']) if example['response']['value'] is not None else 'Value is uncertain'}
+- {'Currency: ' + str(example['response']['currency']) if example['response']['currency'] is not None else 'Currency is uncertain'}
+OUTPUT: {json.dumps(modified_response)}
 
 """
 

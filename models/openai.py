@@ -21,7 +21,7 @@ class OpenAIModel(BaseModel):
         html: str, 
         button_text: str
     ) -> ModelResponse:
-        """Evaluate click using OpenAI model."""
+        """Determine the monetary value of a click using OpenAI model."""
         prompt = get_prompt(html, button_text)
         
         try:
@@ -29,7 +29,7 @@ class OpenAIModel(BaseModel):
                 model=self.model_name,
                 response_format={"type": "json_object"},
                 messages=[
-                    {"role": "system", "content": "You analyze HTML and click data to determine if a click has monetary value."},
+                    {"role": "system", "content": "You analyze HTML and button text to determine the monetary value of a click."},
                     {"role": "user", "content": prompt}
                 ]
             )
@@ -37,35 +37,20 @@ class OpenAIModel(BaseModel):
             try:
                 output = json.loads(response.choices[0].message.content)
                 
-                # Validate response format
-                is_value_click = self._parse_boolean(output.get("isValueClick", False))
+                # Validate and parse fields
                 value = self._parse_number(output.get("value"))
                 currency = self._parse_currency(output.get("currency"))
                 
-                # If it's not a value click, ensure value and currency are None
-                if not is_value_click:
-                    value = None
-                    currency = None
-                
                 return ModelResponse(
-                    is_value_click=is_value_click,
                     value=value,
                     currency=currency
                 )
             except (json.JSONDecodeError, KeyError):
-                return ModelResponse(is_value_click=False)
+                return ModelResponse()
                 
         except Exception as e:
             print(f"Error calling OpenAI API: {str(e)}")
-            return ModelResponse(is_value_click=False)
-    
-    def _parse_boolean(self, value: Any) -> bool:
-        """Parse a boolean value, handling various formats."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.lower() == "true"
-        return bool(value)
+            return ModelResponse()
     
     def _parse_number(self, value: Any) -> Optional[float]:
         """Parse a numeric value, handling various formats."""
@@ -99,6 +84,7 @@ class OpenAIModel(BaseModel):
                 "pounds": "GBP",
                 "yen": "JPY",
                 "rupees": "INR",
+                "shekels": "ILS",
             }
             
             # Clean the value

@@ -7,11 +7,9 @@ class ModelResponse:
     
     def __init__(
         self, 
-        is_value_click: bool, 
         value: Optional[float] = None, 
         currency: Optional[str] = None
     ):
-        self.is_value_click = bool(is_value_click)
         self.value = self._validate_value(value)
         self.currency = self._validate_currency(currency)
     
@@ -61,7 +59,6 @@ class ModelResponse:
     def to_json(self) -> str:
         """Convert response to JSON string."""
         return json.dumps({
-            "isValueClick": self.is_value_click,
             "value": self.value,
             "currency": self.currency
         })
@@ -69,7 +66,6 @@ class ModelResponse:
     def to_dict(self) -> Dict:
         """Convert response to dictionary."""
         return {
-            "isValueClick": self.is_value_click,
             "value": self.value,
             "currency": self.currency
         }
@@ -83,5 +79,5 @@ class BaseModel(ABC):
         html: str, 
         button_text: str
     ) -> ModelResponse:
-        """Evaluate if a click has value and determine its value and currency."""
+        """Determine the monetary value of a click."""
         pass 

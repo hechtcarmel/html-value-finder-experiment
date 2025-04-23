@@ -1,5 +1,118 @@
-from typing import List, Dict, Any, Optional
-from bs4 import BeautifulSoup
+from typing import List, Dict, Any, Optional, Tuple
+from bs4 import BeautifulSoup, Comment, Doctype
+
+def clean_html(full_html: str, button_text: str) -> Tuple[str, int, int]:
+    """
+    Clean HTML to reduce tokens by removing unnecessary elements and focusing on
+    button-relevant content.
+    
+    Args:
+        full_html: Complete HTML content
+        button_text: Text of the clicked button
+        
+    Returns:
+        Tuple of (cleaned_html, original_size, new_size)
+    """
+    try:
+        # Track sizes for reporting
+        original_size = len(full_html)
+        
+        # Parse HTML
+        soup = BeautifulSoup(full_html, 'html.parser')
+        
+        # Remove scripts
+        for script in soup.find_all('script'):
+            script.decompose()
+            
+        # Remove styles
+        for style in soup.find_all('style'):
+            style.decompose()
+            
+        # Remove comments
+        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+            comment.extract()
+            
+        # Remove doctype
+        for doctype in soup.find_all(string=lambda text: isinstance(text, Doctype)):
+            doctype.extract()
+            
+        # Remove meta tags
+        for meta in soup.find_all('meta'):
+            meta.decompose()
+            
+        # Remove link tags
+        for link in soup.find_all('link'):
+            link.decompose()
+            
+        # Try to find relevant content around the button_text
+        if button_text:
+            # Find all elements containing the button text
+            button_elements = []
+            
+            # Try to find exact button elements first
+            for button in soup.find_all('button'):
+                if button.text and button_text.lower() in button.text.lower():
+                    button_elements.append(button)
+            
+            # If no buttons found, try other elements like anchors or divs
+            if not button_elements:
+                for elem in soup.find_all(['a', 'div', 'span', 'input']):
+                    if elem.text and button_text.lower() in elem.text.lower():
+                        button_elements.append(elem)
+            
+            # If button elements found, extract relevant content
+            if button_elements:
+                # Keep track of found context
+                context_elements = set()
+                
+                for button in button_elements:
+                    # Add the button itself
+                    context_elements.add(button)
+                    
+                    # Add parent elements (up to 3 levels)
+                    parent = button.parent
+                    level = 0
+                    while parent and level < 3:
+                        context_elements.add(parent)
+                        parent = parent.parent
+                        level += 1
+                    
+                    # For each parent, keep their direct children
+                    for parent_elem in list(context_elements):
+                        if hasattr(parent_elem, 'children'):
+                            for child in parent_elem.children:
+                                if child.name:  # Skip NavigableString
+                                    context_elements.add(child)
+                
+                # Create a new soup with just the relevant elements
+                new_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
+                container = new_soup.body
+                
+                # Sort elements by their location in the original document
+                sorted_elements = sorted(context_elements, key=lambda x: str(x).count('<'))
+                
+                # Add elements to the new soup
+                for elem in sorted_elements:
+                    if hasattr(elem, 'name') and elem.name:
+                        # Avoid duplicating body or html
+                        if elem.name not in ['html', 'body']:
+                            container.append(elem)
+                
+                # Only use the new soup if it contains the button text
+                if button_text.lower() in new_soup.text.lower():
+                    soup = new_soup
+        
+        # Convert back to string
+        cleaned_html = str(soup)
+        new_size = len(cleaned_html)
+        
+        # Calculate reduction
+        reduction_percent = ((original_size - new_size) / original_size) * 100
+        
+        return cleaned_html, original_size, new_size
+    except Exception as e:
+        print(f"Error cleaning HTML: {str(e)}")
+        return full_html, len(full_html), len(full_html)
 
 def extract_relevant_html(
     full_html: str, 

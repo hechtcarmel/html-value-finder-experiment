@@ -21,7 +21,7 @@ class AnthropicModel(BaseModel):
         html: str, 
         button_text: str
     ) -> ModelResponse:
-        """Evaluate click using Anthropic Claude model."""
+        """Determine the monetary value of a click using Anthropic Claude model."""
         prompt = get_prompt(html, button_text)
         
         try:
@@ -31,7 +31,7 @@ class AnthropicModel(BaseModel):
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
-                system="You analyze HTML and click data to determine if a click has monetary value. Always respond with a JSON object containing 'isValueClick', 'value', and 'currency' fields."
+                system="You analyze HTML and button text to determine the monetary value of a click. Always respond with a JSON object containing 'value' and 'currency' fields."
             )
             
             try:
@@ -46,35 +46,20 @@ class AnthropicModel(BaseModel):
                 
                 output = json.loads(json_str)
                 
-                # Validate response format
-                is_value_click = self._parse_boolean(output.get("isValueClick", False))
+                # Validate and parse fields
                 value = self._parse_number(output.get("value"))
                 currency = self._parse_currency(output.get("currency"))
                 
-                # If it's not a value click, ensure value and currency are None
-                if not is_value_click:
-                    value = None
-                    currency = None
-                
                 return ModelResponse(
-                    is_value_click=is_value_click,
                     value=value,
                     currency=currency
                 )
             except (json.JSONDecodeError, KeyError, AttributeError):
-                return ModelResponse(is_value_click=False)
+                return ModelResponse()
                 
         except Exception as e:
             print(f"Error calling Anthropic API: {str(e)}")
-            return ModelResponse(is_value_click=False)
-    
-    def _parse_boolean(self, value: Any) -> bool:
-        """Parse a boolean value, handling various formats."""
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            return value.lower() == "true"
-        return bool(value)
+            return ModelResponse()
     
     def _parse_number(self, value: Any) -> Optional[float]:
         """Parse a numeric value, handling various formats."""
@@ -108,6 +93,7 @@ class AnthropicModel(BaseModel):
                 "pounds": "GBP",
                 "yen": "JPY",
                 "rupees": "INR",
+                "shekels": "ILS",
             }
             
             # Clean the value
