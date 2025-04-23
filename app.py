@@ -12,7 +12,7 @@ from utils.html_parser import clean_html
 load_dotenv()
 
 # Initialize models
-ollama_model = OllamaModel(model_name=os.getenv("OLLAMA_MODEL", "llama3"))
+ollama_model = OllamaModel(model_name=os.getenv("OLLAMA_MODEL", "llama3.2"))
 
 # Initialize OpenAI and Anthropic models if API keys are provided
 openai_model = None

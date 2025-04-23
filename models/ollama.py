@@ -1,18 +1,17 @@
-import httpx
+import ollama
 from typing import Dict, List, Optional, Any
 import json
+import asyncio
 from .base import BaseModel, ModelResponse
-from prompts.click_value import get_prompt
+from prompts.click_value import get_system_prompt, get_user_prompt
 
 class OllamaModel(BaseModel):
     """Interface for Ollama models."""
     
-    def __init__(self, model_name: str = "llama3", base_url: str = "http://localhost:11434"):
+    def __init__(self, model_name: str = "llama3.2", base_url: str = "http://localhost:11434"):
         self.model_name = model_name
         self.base_url = base_url
-        self.api_url = f"{base_url}/api/generate"
-        # Create client with no timeout
-        self.client = httpx.AsyncClient(timeout=None)
+        ollama.base_url = base_url  # Set the base URL directly
     
     async def evaluate_click(
         self, 
@@ -20,24 +19,26 @@ class OllamaModel(BaseModel):
         button_text: str
     ) -> ModelResponse:
         """Determine the monetary value of a click using Ollama model."""
-        prompt = get_prompt(html, button_text)
+        system_prompt = get_system_prompt()
+        user_prompt = get_user_prompt(html, button_text)
         
         try:
-            response = await self.client.post(
-                self.api_url,
-                json={
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "stream": False,
-                    "format": "json"
-                }
+            # Use asyncio.to_thread to make synchronous ollama library call non-blocking
+            response = await asyncio.to_thread(
+                ollama.chat,
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                format="json"
             )
-            response.raise_for_status()
-            result = response.json()
             
-            # Parse model output (handle potential format issues)
+            # Parse model output
             try:
-                output = json.loads(result["response"])
+                # Extract the content from the response
+                response_content = response["message"]["content"]
+                output = json.loads(response_content)
                 
                 # Validate and parse fields
                 value = self._parse_number(output.get("value"))
@@ -47,11 +48,12 @@ class OllamaModel(BaseModel):
                     value=value,
                     currency=currency
                 )
-            except (json.JSONDecodeError, KeyError):
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Error parsing response: {str(e)}")
                 # Fallback if the model doesn't return valid JSON
                 return ModelResponse()
                 
-        except (httpx.HTTPError, json.JSONDecodeError) as e:
+        except Exception as e:
             print(f"Error calling Ollama API: {str(e)}")
             return ModelResponse()
     
@@ -101,4 +103,4 @@ class OllamaModel(BaseModel):
             if len(value) == 3 and value.isalpha():
                 return value.upper()
         
-        return None 
+        return None

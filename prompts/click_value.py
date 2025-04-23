@@ -2,45 +2,35 @@ from typing import List
 from examples.click_examples import EXAMPLES
 import json
 
-def get_prompt(html: str, button_text: str) -> str:
-    """Generate a prompt for click value evaluation with multi-shot examples."""
+def get_system_prompt() -> str:
+    """Generate the system prompt for click value evaluation."""
     
-    # Create base prompt
-    base_prompt = f"""
-Your task is to analyze the HTML context and clicked button text to determine the monetary value of a click.
-Focus on finding the price most closely associated with the element containing the button text.
-
-INPUT:
-- HTML content (potentially cleaned and reduced)
-- Text content of the clicked button
+    system_prompt = """Your task is to analyze the HTML context and clicked button text to determine the monetary value of a click (For example - how much money the item costs).
+Focus on finding the price most closely associated with the clicked button.
 
 OUTPUT: 
 A JSON object with the following structure:
-{{
+{
   "value": number | null,        // the NUMERIC monetary value if detected with high confidence (e.g., 149.99), null if uncertain
   "currency": string | null      // the currency code (USD, EUR, GBP, etc.) if detected with high confidence, null if uncertain
-}}
+}
 
 IMPORTANT RULES:
-1. Identify the element containing the exact button_text in the HTML.
-2. Look for price information (value and currency) structurally near this button element (e.g., within the same parent container, sibling elements).
-3. If there are multiple prices on the page, prioritize the price that is closest in the HTML structure to the button element.
-4. Consider the context: if the button is inside a product card, the price in that card is relevant. If it's a checkout button, the total price is relevant.
-5. Only include specific "value" and "currency" if you can determine them with high confidence AND associate them directly with the clicked button's context.
-6. If the button text is generic (e.g., "Buy Now") and appears multiple times with different prices, and you cannot confidently determine which one was clicked based on the HTML context, return null for value and currency.
-7. If uncertain about the value or currency, return null for those fields.
-8. Return the numeric value without currency symbols.
-9. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.).
-10. For subscription prices, return the value shown (e.g., $9.99/month should return 9.99).
-11. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string.
-12. The "currency" field should be a 3-letter currency code (e.g., "USD") or null.
+
+1. If there are multiple prices on the page, consider the context and structure of the page to determine the price.
+2. Consider the context: if the button is inside a product card, the price in that card is relevant. If it's a checkout button, the total price is relevant.
+3. Only include specific "value" and "currency" if you can determine them to be the price that the clicked button is associated with.
+4. If very uncertain about the value or currency, return null for those fields.
+5. Return the numeric value without currency symbols.
+6. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.).
+7. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string.
+8. The "currency" field should be a 3-letter currency code (e.g., "USD") or null.
 
 Examples of CORRECT values:
 - value: 149.99 (numeric)
-- value: 15 (numeric)
-- value: null (when monetary value can't be determined with confidence)
+- value: null (when monetary value can't be determined)
 - currency: "USD" (3-letter code)
-- currency: null (when currency can't be determined with confidence)
+- currency: null (when currency can't be determined)
 
 Examples of INCORRECT values:
 - value: true (boolean, not numeric)
@@ -48,7 +38,7 @@ Examples of INCORRECT values:
 - currency: "$" (symbol, not 3-letter code)
 - currency: "dollars" (word, not 3-letter code)
 
-Here are examples of how to analyze different scenarios:
+Here are examples of how to analyze different SIMPLE scenarios:
 """
 
     # Add examples
@@ -59,7 +49,7 @@ Here are examples of how to analyze different scenarios:
             "currency": example['response']['currency']
         }
         
-        base_prompt += f"""
+        system_prompt += f"""
 EXAMPLE {i+1}:
 HTML: {example['html']}
 Button Text: {example['button_text']}
@@ -69,17 +59,20 @@ Analysis:
 OUTPUT: {json.dumps(modified_response)}
 
 """
+    
+    return system_prompt
 
-    # Add the current request
-    base_prompt += f"""
-Now analyze this case:
-HTML: {html}
+def get_user_prompt(html: str, button_text: str) -> str:
+    """Generate the user prompt with the current case to analyze."""
+    
+    return f"""HTML: {html}
 Button Text: {button_text}
 
-Respond ONLY with a valid JSON object following the exact format specified above.
+Respond ONLY with a valid JSON object following the exact format specified in the system prompt.
 Focus on the price closest to the button text element in the HTML structure.
 Make sure the "value" field is a numeric value or null, never a boolean or string.
-Make sure the "currency" field is a 3-letter currency code or null.
-"""
-    
-    return base_prompt 
+Make sure the "currency" field is a 3-letter currency code or null."""
+
+def get_prompt(html: str, button_text: str) -> str:
+    """Legacy function that combines system and user prompts for backward compatibility."""
+    return get_system_prompt() + "\n\nNow analyze this case:\n" + get_user_prompt(html, button_text)

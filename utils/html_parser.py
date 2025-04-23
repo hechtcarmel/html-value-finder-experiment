@@ -43,66 +43,66 @@ def clean_html(full_html: str, button_text: str, ultra_compact: bool = False) ->
             meta.decompose()
             
         # Remove link tags
-        for link in soup.find_all('link'):
-            link.decompose()
+        # for link in soup.find_all('link'):
+        #     link.decompose()
             
         # Try to find relevant content around the button_text
-        if button_text:
-            # Find all elements containing the button text
-            button_elements = []
+        # if button_text:
+        #     # Find all elements containing the button text
+        #     button_elements = []
             
-            # Try to find exact button elements first
-            for button in soup.find_all('button'):
-                if button.text and button_text.lower() in button.text.lower():
-                    button_elements.append(button)
+            # # Try to find exact button elements first
+            # for button in soup.find_all('button'):
+            #     if button.text and button_text.lower() in button.text.lower():
+            #         button_elements.append(button)
             
-            # If no buttons found, try other elements like anchors or divs
-            if not button_elements:
-                for elem in soup.find_all(['a', 'div', 'span', 'input']):
-                    if elem.text and button_text.lower() in elem.text.lower():
-                        button_elements.append(elem)
+            # # If no buttons found, try other elements like anchors or divs
+            # if not button_elements:
+            #     for elem in soup.find_all(['a', 'div', 'span', 'input']):
+            #         if elem.text and button_text.lower() in elem.text.lower():
+            #             button_elements.append(elem)
             
-            # If button elements found, extract relevant content
-            if button_elements:
-                # Keep track of found context
-                context_elements = set()
+            # # If button elements found, extract relevant content
+            # if button_elements:
+            #     # Keep track of found context
+            #     context_elements = set()
                 
-                for button in button_elements:
-                    # Add the button itself
-                    context_elements.add(button)
+            #     for button in button_elements:
+            #         # Add the button itself
+            #         context_elements.add(button)
                     
-                    # Add parent elements (up to 3 levels)
-                    parent = button.parent
-                    level = 0
-                    while parent and level < 3:
-                        context_elements.add(parent)
-                        parent = parent.parent
-                        level += 1
+            #         # Add parent elements (up to 3 levels)
+            #         parent = button.parent
+            #         level = 0
+            #         while parent and level < 3:
+            #             context_elements.add(parent)
+            #             parent = parent.parent
+            #             level += 1
                     
-                    # For each parent, keep their direct children
-                    for parent_elem in list(context_elements):
-                        if hasattr(parent_elem, 'children'):
-                            for child in parent_elem.children:
-                                if child.name:  # Skip NavigableString
-                                    context_elements.add(child)
+            #         # For each parent, keep their direct children
+            #         for parent_elem in list(context_elements):
+            #             if hasattr(parent_elem, 'children'):
+            #                 for child in parent_elem.children:
+            #                     if child.name:  # Skip NavigableString
+            #                         context_elements.add(child)
                 
-                # Create a new soup with just the relevant elements
-                new_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
-                container = new_soup.body
+            #     # Create a new soup with just the relevant elements
+            #     new_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
+            #     container = new_soup.body
                 
-                # Sort elements by their location in the original document
-                sorted_elements = sorted(context_elements, key=lambda x: str(x).count('<'))
+            #     # Sort elements by their location in the original document
+            #     sorted_elements = sorted(context_elements, key=lambda x: str(x).count('<'))
                 
-                # Add elements to the new soup
-                for elem in sorted_elements:
-                    if hasattr(elem, 'name') and elem.name:
-                        # Avoid duplicating body or html
-                        if elem.name not in ['html', 'body']:
-                            container.append(elem)
+            #     # Add elements to the new soup
+            #     for elem in sorted_elements:
+            #         if hasattr(elem, 'name') and elem.name:
+            #             # Avoid duplicating body or html
+            #             if elem.name not in ['html', 'body']:
+            #                 container.append(elem)
                 
-                # Only use the new soup if it contains the button text
-                if button_text.lower() in new_soup.text.lower():
-                    soup = new_soup
+            #     # Only use the new soup if it contains the button text
+            #     if button_text.lower() in new_soup.text.lower():
+            #         soup = new_soup
         
         # Convert back to string
         cleaned_html = str(soup)
@@ -147,59 +147,3 @@ def clean_html(full_html: str, button_text: str, ultra_compact: bool = False) ->
     except Exception as e:
         print(f"Error cleaning HTML: {str(e)}")
         return full_html, len(full_html), len(full_html)
-
-def extract_relevant_html(
-    full_html: str, 
-    click_path: List[str], 
-    context_size: int = 5
-) -> str:
-    """
-    Extract relevant portion of HTML around the clicked element.
-    
-    Args:
-        full_html: Complete HTML content
-        click_path: CSS selectors path to the clicked element
-        context_size: Number of siblings to include for context
-        
-    Returns:
-        Extracted HTML with relevant context
-    """
-    try:
-        soup = BeautifulSoup(full_html, 'html.parser')
-        
-        # Find the clicked element
-        element = soup
-        for selector in click_path:
-            if selector.startswith("#"):
-                element = element.find(id=selector[1:])
-            elif selector.startswith("."):
-                element = element.find(class_=selector[1:])
-            elif "." in selector:
-                tag, class_name = selector.split(".", 1)
-                element = element.find(tag, class_=class_name)
-            elif "#" in selector:
-                tag, id_name = selector.split("#", 1)
-                element = element.find(tag, id=id_name)
-            else:
-                element = element.find(selector)
-                
-            if not element:
-                return ""
-        
-        # Get parent container
-        parent = element.parent
-        
-        # Extract relevant siblings for context
-        siblings = []
-        for i, sibling in enumerate(parent.children):
-            if i < context_size * 2 + 1:
-                siblings.append(str(sibling))
-        
-        # If we can go up another level for more context, do so
-        if parent.parent:
-            return str(parent.parent)
-        
-        return "".join(siblings)
-    except Exception as e:
-        print(f"Error parsing HTML: {str(e)}")
-        return full_html[:1000]  # Return truncated HTML on error 
