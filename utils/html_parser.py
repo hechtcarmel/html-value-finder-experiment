@@ -22,93 +22,35 @@ def clean_html(full_html: str, button_text: str, ultra_compact: bool = False) ->
         # Parse HTML
         soup = BeautifulSoup(full_html, 'html.parser')
         
-        # Remove scripts
-        for script in soup.find_all('script'):
-            script.decompose()
-            
-        # Remove styles
-        for style in soup.find_all('style'):
-            style.decompose()
-            
-        # Remove comments
-        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
-            comment.extract()
-            
-        # Remove doctype
-        for doctype in soup.find_all(string=lambda text: isinstance(text, Doctype)):
-            doctype.extract()
-            
-        # Remove meta tags
-        for meta in soup.find_all('meta'):
-            meta.decompose()
-            
-        # Remove link tags
-        # for link in soup.find_all('link'):
-        #     link.decompose()
-            
-        # Try to find relevant content around the button_text
-        # if button_text:
-        #     # Find all elements containing the button text
-        #     button_elements = []
-            
-            # # Try to find exact button elements first
-            # for button in soup.find_all('button'):
-            #     if button.text and button_text.lower() in button.text.lower():
-            #         button_elements.append(button)
-            
-            # # If no buttons found, try other elements like anchors or divs
-            # if not button_elements:
-            #     for elem in soup.find_all(['a', 'div', 'span', 'input']):
-            #         if elem.text and button_text.lower() in elem.text.lower():
-            #             button_elements.append(elem)
-            
-            # # If button elements found, extract relevant content
-            # if button_elements:
-            #     # Keep track of found context
-            #     context_elements = set()
-                
-            #     for button in button_elements:
-            #         # Add the button itself
-            #         context_elements.add(button)
-                    
-            #         # Add parent elements (up to 3 levels)
-            #         parent = button.parent
-            #         level = 0
-            #         while parent and level < 3:
-            #             context_elements.add(parent)
-            #             parent = parent.parent
-            #             level += 1
-                    
-            #         # For each parent, keep their direct children
-            #         for parent_elem in list(context_elements):
-            #             if hasattr(parent_elem, 'children'):
-            #                 for child in parent_elem.children:
-            #                     if child.name:  # Skip NavigableString
-            #                         context_elements.add(child)
-                
-            #     # Create a new soup with just the relevant elements
-            #     new_soup = BeautifulSoup('<html><body></body></html>', 'html.parser')
-            #     container = new_soup.body
-                
-            #     # Sort elements by their location in the original document
-            #     sorted_elements = sorted(context_elements, key=lambda x: str(x).count('<'))
-                
-            #     # Add elements to the new soup
-            #     for elem in sorted_elements:
-            #         if hasattr(elem, 'name') and elem.name:
-            #             # Avoid duplicating body or html
-            #             if elem.name not in ['html', 'body']:
-            #                 container.append(elem)
-                
-            #     # Only use the new soup if it contains the button text
-            #     if button_text.lower() in new_soup.text.lower():
-            #         soup = new_soup
+        # First pass of aggressive removal (elements typically not relevant for price extraction)
+        for element in soup.find_all(['script', 'style', 'meta', 'svg', 'link', 'iframe', 'noscript', 'video', 'audio']):
+            element.decompose()
         
-        # Convert back to string
+        # Remove all comments and doctypes
+        for comment in soup.find_all(string=lambda text: isinstance(text, (Comment, Doctype))):
+            comment.extract()
+                
+        # Remove all class and id attributes which are usually for styling
+        for tag in soup.find_all(True):
+            if tag.has_attr('class'):
+                del tag['class']
+            if tag.has_attr('id'):
+                del tag['id']
+            
+            # Remove data attributes and event handlers
+            attrs_to_remove = [attr for attr in tag.attrs if attr.startswith('data-') or attr.startswith('on')]
+            for attr in attrs_to_remove:
+                del tag[attr]
+        
+        # Remove empty elements that don't contribute to the structure
+        for tag in soup.find_all():
+            if not tag.contents and tag.name not in ['img', 'br', 'hr', 'input']:
+                tag.decompose()
+        
         cleaned_html = str(soup)
         
         if ultra_compact:
-            # Ultra compact mode - create a single line with minimal whitespace
+            # Ultra compact mode - more aggressive than before
             # 1. Remove all newlines
             cleaned_html = cleaned_html.replace('\n', '')
             
@@ -121,8 +63,13 @@ def clean_html(full_html: str, button_text: str, ultra_compact: bool = False) ->
             # 4. Remove spaces around tag attributes
             cleaned_html = re.sub(r'\s*=\s*', '=', cleaned_html)
             
+            # 5. Remove unnecessary quotes around attribute values when safe
+            cleaned_html = re.sub(r'="([a-zA-Z0-9_-]+)"', r'=\1', cleaned_html)
+            
+            # 6. Remove empty attributes
+            cleaned_html = re.sub(r'\s+[a-zA-Z-]+=("")', '', cleaned_html)
         else:
-            # Standard whitespace cleaning
+            # Standard cleaning
             # 1. Replace multiple newlines with a single newline
             cleaned_html = re.sub(r'\n\s*\n', '\n', cleaned_html)
             
@@ -139,9 +86,6 @@ def clean_html(full_html: str, button_text: str, ultra_compact: bool = False) ->
             cleaned_html = re.sub(r'>\s+<', '><', cleaned_html)
         
         new_size = len(cleaned_html)
-        
-        # Calculate reduction
-        reduction_percent = ((original_size - new_size) / original_size) * 100
         
         return cleaned_html, original_size, new_size
     except Exception as e:
