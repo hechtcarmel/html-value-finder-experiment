@@ -10,14 +10,12 @@ EXAMPLES = [
   <button class="add-to-cart-btn">Add to Cart</button>
 </div>
         """,
-        "click_path": ["div.product-container", "button.add-to-cart-btn"],
         "button_text": "Add to Cart",
         "response": {
-            "isValueClick": True,
             "value": 149.99,
             "currency": "USD"
         },
-        "response_json": '{"isValueClick": true, "value": 149.99, "currency": "USD"}'
+        "response_json": '{"value": 149.99, "currency": "USD"}'
     },
     {
         "html": """
@@ -31,14 +29,12 @@ EXAMPLES = [
   <button class="subscribe-btn">Subscribe Now</button>
 </div>
         """,
-        "click_path": ["div.subscription-plan", "button.subscribe-btn"],
         "button_text": "Subscribe Now",
         "response": {
-            "isValueClick": True,
             "value": 29.99,
             "currency": "EUR"
         },
-        "response_json": '{"isValueClick": true, "value": 29.99, "currency": "EUR"}'
+        "response_json": '{"value": 29.99, "currency": "EUR"}'
     },
     {
         "html": """
@@ -51,14 +47,12 @@ EXAMPLES = [
   <button class="read-more-btn">Read More</button>
 </div>
         """,
-        "click_path": ["div.article-container", "button.read-more-btn"],
         "button_text": "Read More",
         "response": {
-            "isValueClick": False,
             "value": None,
             "currency": None
         },
-        "response_json": '{"isValueClick": false, "value": null, "currency": null}'
+        "response_json": '{"value": null, "currency": null}'
     },
     {
         "html": """
@@ -90,59 +84,125 @@ EXAMPLES = [
   <button id="complete-purchase">Complete Purchase</button>
 </div>
         """,
-        "click_path": ["div.checkout-summary", "button#complete-purchase"],
         "button_text": "Complete Purchase",
         "response": {
-            "isValueClick": True,
             "value": 131.88,
             "currency": "GBP"
         },
-        "response_json": '{"isValueClick": true, "value": 131.88, "currency": "GBP"}'
+        "response_json": '{"value": 131.88, "currency": "GBP"}'
     },
     {
         "html": """
-<div class="product-details">
-  <h2>Smartphone XS Pro</h2>
-  <div class="price-info">
-    <div class="current-price">₹59,999</div>
-    <div class="original-price"><s>₹69,999</s></div>
-    <div class="discount">15% off</div>
+<div class="product-grid">
+  <div class="product-card">
+    <h2>Product A</h2>
+    <div class="price">$19.99</div>
+    <button class="buy-btn">Buy Now</button>
   </div>
-  <div class="product-actions">
-    <button class="wishlist-btn">Add to Wishlist</button>
-    <button class="buy-now-btn">Buy Now</button>
+  <div class="product-card">
+    <h2>Product B</h2>
+    <div class="price">$25.50</div>
+    <button class="buy-btn">Buy Now</button>
+  </div>
+  <div class="product-card main-product">
+    <h2>Product C (Featured)</h2>
+    <div class="price">$30.00</div>
+    <button class="buy-btn special-offer">Buy Now</button>
   </div>
 </div>
         """,
-        "click_path": ["div.product-details", "div.product-actions", "button.buy-now-btn"],
         "button_text": "Buy Now",
         "response": {
-            "isValueClick": True,
-            "value": 59999,
-            "currency": "INR"
-        },
-        "response_json": '{"isValueClick": true, "value": 59999, "currency": "INR"}'
-    },
-    {
-        "html": """
-<div class="digital-download">
-  <div class="content-details">
-    <h3>Photography E-Book</h3>
-    <div class="download-info">PDF Format (25MB)</div>
-  </div>
-  <div class="action-area">
-    <div class="price">Free</div>
-    <button class="download-button">Download</button>
-  </div>
-</div>
-        """,
-        "click_path": ["div.digital-download", "div.action-area", "button.download-button"],
-        "button_text": "Download",
-        "response": {
-            "isValueClick": False,
             "value": None,
             "currency": None
         },
-        "response_json": '{"isValueClick": false, "value": null, "currency": null}'
+        "response_json": '{"value": null, "currency": null}'
+    },
+    {
+        "html": """
+<div class="product-grid">
+  <div class="product-card">
+    <h2>Product A</h2>
+    <div class="price">$19.99</div>
+    <button class="buy-btn">Buy Product A</button>
+  </div>
+  <div class="product-card">
+    <h2>Product B</h2>
+    <div class="price">$25.50</div>
+    <button class="buy-btn">Buy Product B</button>
+  </div>
+  <div class="product-card main-product">
+    <h2>Product C (Featured)</h2>
+    <div class="price">$30.00</div>
+    <button class="buy-btn special-offer">Buy Featured Product C</button>
+  </div>
+</div>
+        """,
+        "button_text": "Buy Featured Product C",
+        "response": {
+            "value": 30.00,
+            "currency": "USD"
+        },
+        "response_json": '{"value": 30.00, "currency": "USD"}'
+    },
+    {
+        "html": """
+<div class="cart-item">
+  <img src="item1.jpg" alt="Item 1">
+  <div class="item-details">
+    <h3>Item 1</h3>
+    <p>Price: 50 ILS</p>
+  </div>
+  <button class="remove-item">Remove</button>
+</div>
+<div class="cart-item">
+  <img src="item2.jpg" alt="Item 2">
+  <div class="item-details">
+    <h3>Item 2</h3>
+    <p>Price: 75 ILS</p>
+  </div>
+  <button class="remove-item">Remove</button>
+</div>
+<div class="cart-summary">
+  <p>Total: 125 ILS</p>
+  <button class="checkout">Checkout</button>
+</div>
+        """,
+        "button_text": "Checkout",
+        "response": {
+            "value": 125,
+            "currency": "ILS"
+        },
+        "response_json": '{"value": 125, "currency": "ILS"}'
+    },
+    {
+        "html": """
+<div class="cart-item">
+  <img src="item1.jpg" alt="Item 1">
+  <div class="item-details">
+    <h3>Item 1</h3>
+    <p>Price: 50 ILS</p>
+  </div>
+  <button class="remove-item">Remove Item 1</button>
+</div>
+<div class="cart-item">
+  <img src="item2.jpg" alt="Item 2">
+  <div class="item-details">
+    <h3>Item 2</h3>
+    <p>Price: 75 ILS</p>
+  </div>
+  <button class="remove-item">Remove Item 2</button>
+</div>
+<div class="cart-summary">
+  <p>Total: 125 ILS</p>
+  <button class="checkout">Checkout</button>
+</div>
+        """,
+        "button_text": "Remove Item 2",
+        "response": {
+            "value": 75,
+            "currency": "ILS"
+        },
+        "response_json": '{"value": 75, "currency": "ILS"}'
     }
 ] 

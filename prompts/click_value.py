@@ -8,9 +8,10 @@ def get_prompt(html: str, button_text: str) -> str:
     # Create base prompt
     base_prompt = f"""
 Your task is to analyze the HTML context and clicked button text to determine the monetary value of a click.
+Focus on finding the price most closely associated with the element containing the button text.
 
 INPUT:
-- HTML content surrounding the click
+- HTML content (potentially cleaned and reduced)
 - Text content of the clicked button
 
 OUTPUT: 
@@ -21,15 +22,18 @@ A JSON object with the following structure:
 }}
 
 IMPORTANT RULES:
-1. Only include specific "value" and "currency" if you can determine them with high confidence
-2. If uncertain about the value or currency, return null for those fields
-3. Return the numeric value without currency symbols
-4. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.)
-5. For subscription prices, return the value shown (e.g., $9.99/month should return 9.99)
-6. Search for the button text in the HTML to determine context for evaluation
-7. Look for price information near the button or in relevant containers
-8. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string
-9. The "currency" field should be a 3-letter currency code (e.g., "USD") or null
+1. Identify the element containing the exact button_text in the HTML.
+2. Look for price information (value and currency) structurally near this button element (e.g., within the same parent container, sibling elements).
+3. If there are multiple prices on the page, prioritize the price that is closest in the HTML structure to the button element.
+4. Consider the context: if the button is inside a product card, the price in that card is relevant. If it's a checkout button, the total price is relevant.
+5. Only include specific "value" and "currency" if you can determine them with high confidence AND associate them directly with the clicked button's context.
+6. If the button text is generic (e.g., "Buy Now") and appears multiple times with different prices, and you cannot confidently determine which one was clicked based on the HTML context, return null for value and currency.
+7. If uncertain about the value or currency, return null for those fields.
+8. Return the numeric value without currency symbols.
+9. Currency should be a standard 3-letter code (USD, EUR, GBP, etc.).
+10. For subscription prices, return the value shown (e.g., $9.99/month should return 9.99).
+11. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string.
+12. The "currency" field should be a 3-letter currency code (e.g., "USD") or null.
 
 Examples of CORRECT values:
 - value: 149.99 (numeric)
@@ -73,6 +77,7 @@ HTML: {html}
 Button Text: {button_text}
 
 Respond ONLY with a valid JSON object following the exact format specified above.
+Focus on the price closest to the button text element in the HTML structure.
 Make sure the "value" field is a numeric value or null, never a boolean or string.
 Make sure the "currency" field is a 3-letter currency code or null.
 """

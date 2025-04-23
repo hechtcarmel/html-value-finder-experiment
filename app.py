@@ -33,12 +33,13 @@ if os.getenv("ANTHROPIC_API_KEY"):
 async def process_click(
     html: str, 
     button_text: str,
-    model_choice: str
+    model_choice: str,
+    ultra_compact: bool
 ) -> Tuple[Dict[str, Any], str, str]:
     """Process click data and determine monetary value."""
     
     # Clean HTML to reduce tokens
-    cleaned_html, original_size, new_size = clean_html(html, button_text)
+    cleaned_html, original_size, new_size = clean_html(html, button_text, ultra_compact)
     
     # Create size reduction message
     reduction_percent = ((original_size - new_size) / original_size) * 100 if original_size > 0 else 0
@@ -77,18 +78,25 @@ with gr.Blocks(title="Click Value Analyzer") as app:
                 placeholder="e.g., Add to Cart"
             )
             
-            # Available models dropdown
-            available_models = ["Ollama"]
-            if openai_model:
-                available_models.append("OpenAI")
-            if anthropic_model:
-                available_models.append("Anthropic")
+            with gr.Row():
+                # Available models dropdown
+                available_models = ["Ollama"]
+                if openai_model:
+                    available_models.append("OpenAI")
+                if anthropic_model:
+                    available_models.append("Anthropic")
+                    
+                model_choice = gr.Dropdown(
+                    label="Select Model",
+                    choices=available_models,
+                    value=available_models[0]
+                )
                 
-            model_choice = gr.Dropdown(
-                label="Select Model",
-                choices=available_models,
-                value=available_models[0]
-            )
+                ultra_compact_checkbox = gr.Checkbox(
+                    label="Ultra-Compact HTML", 
+                    value=True,
+                    info="Minimize whitespace and newlines to reduce tokens"
+                )
             
             analyze_button = gr.Button("Analyze Click Value")
         
@@ -116,8 +124,8 @@ with gr.Blocks(title="Click Value Analyzer") as app:
         )
     
     analyze_button.click(
-        fn=lambda html, text, model: asyncio.run(process_click(html, text, model)),
-        inputs=[html_input, button_text_input, model_choice],
+        fn=lambda html, text, model, compact: asyncio.run(process_click(html, text, model, compact)),
+        inputs=[html_input, button_text_input, model_choice, ultra_compact_checkbox],
         outputs=[json_output, processed_html_output, size_info_output]
     )
 
@@ -131,5 +139,5 @@ if __name__ == "__main__":
         quiet=False,
         show_api=True,
         root_path=None,
-        ssl_verify=True,
+        ssl_verify=True
     ) 
