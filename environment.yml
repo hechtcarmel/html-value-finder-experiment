@@ -1,0 +1,16 @@
+name: value-llm
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - gradio
+    - openai
+    - anthropic
+    - httpx
+    - pydantic
+    - jinja2
+    - beautifulsoup4
+    - python-dotenv 
