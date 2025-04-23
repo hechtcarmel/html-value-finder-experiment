@@ -26,6 +26,7 @@ IMPORTANT RULES:
 7. The "value" field MUST be a number (like 10.99) or null, NEVER a boolean or string.
 8. The "currency" field should be a 3-letter currency code (e.g., "USD") or null.
 9. Be careful not to return "price" instead of "value"
+10. The value MUST BE A NUMBER THAT EXISTS IN THE HTML. DO NOT MAKE UP A VALUE.
 
 Examples of CORRECT values:
 - value: 149.99 (numeric)
